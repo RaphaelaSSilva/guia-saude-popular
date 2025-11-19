@@ -222,8 +222,9 @@
 
 
         // --- CONFIGURAÇÃO DE CREDENCIAIS (FORNECIDAS PELO USUÁRIO) ---
-        // Estas credenciais foram inseridas no código:
-        const GEMINI_API_KEY = "AIzaSyAs44bhHiS9M052oMd900ke1tjheEDQYv4";
+        // ATENÇÃO: SUBSTITUA ESTE VALOR PELA SUA NOVA CHAVE DE API GEMINI REAL.
+        // É AQUI ONDE VOCÊ DEVE COLAR SUA CHAVE!
+        const GEMINI_API_KEY = "AIzaSyAl_nCR3boy_TR5QvJhUTnfBo-onkKtVNY"; 
 
         const FIREBASE_APP_ID = "1:593810769765:web:52f6ef3b18eefcafc4c38c";
         const FIREBASE_CONFIG = {
@@ -375,7 +376,7 @@
             let contentHtml = text;
             if (sender === 'community') {
                 const messageClass = userDisplayName === userId ? 'user' : 'ai';
-                const displayName = userDisplayName === userId ? 'Você' : `Usuário (${userDisplayName})`;
+                const displayName = userDisplayName === userId ? 'Você' : `Usuário (${userDisplayName.substring(0, 8)}...)`;
                 messageDiv.classList.add('chat-message', messageClass, 'p-4', 'rounded-xl', 'shadow-md', 'chat-bubble');
                 contentHtml = `<p class="font-bold text-sm mb-1">${displayName}:</p>${text}`;
             } else {
@@ -396,15 +397,16 @@
             }
             console.log("Configurando listener para o usuário:", auth.currentUser.uid);
             const communityRef = collection(db, `artifacts/${appId}/public/data/community_chat`);
-            const q = query(communityRef);
+            // Adicionamos um limite de 50 mensagens para melhorar o desempenho
+            const q = query(communityRef); // Sem orderBy para evitar a necessidade de índice
 
 
             onSnapshot(q, (snapshot) => {
-                snapshot.docChanges().forEach((change) => {
-                    const message = change.doc.data();
-                    if (change.type === "added") {
-                        addMessage(message.text, 'community', communityContainer, message.userId);
-                    }
+                // Remove o conteúdo antigo para reconstruir a lista (ajustado para ser mais eficiente)
+                communityContainer.innerHTML = ''; 
+                snapshot.forEach((doc) => {
+                    const message = doc.data();
+                    addMessage(message.text, 'community', communityContainer, message.userId);
                 });
             }, (error) => {
                 console.error("Erro ao receber mensagens da comunidade:", error);
@@ -502,17 +504,19 @@
                     audio.play();
                 } else {
                     console.error("Dados de áudio inválidos recebidos.");
-                    addMessage("Desculpe, não foi possível gerar o áudio.", 'ai', chatContainer);
+                    // Não adicionar mensagem no chat, pois pode ser um erro silencioso
                 }
             } catch (error) {
                 console.error("Erro ao gerar áudio:", error);
-                addMessage("Desculpe, não foi possível gerar o áudio.", 'ai', chatContainer);
+                // Não adicionar mensagem no chat, pois pode ser um erro silencioso
             }
         }
        
         // Function to call the Gemini API with a specific prompt
         async function getAIResponse(query, prompt, imageData = null) {
             let payload;
+            const model = "gemini-2.5-flash-preview-05-20"; // Modelo com Google Search
+            
             if (imageData) {
                 payload = {
                     contents: [{
@@ -531,8 +535,8 @@
                 };
             }
        
-            const apiKey = GEMINI_API_KEY; // Chave Gemini Inserida
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const apiKey = GEMINI_API_KEY; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
        
             try {
                 const response = await fetch(apiUrl, {
@@ -542,14 +546,18 @@
                 });
                
                 if (!response.ok) {
-                    throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+                    // Tenta ler o erro do corpo da resposta, se possível
+                    const errorBody = await response.text();
+                    console.error(`HTTP Error: ${response.status} ${response.statusText}`, errorBody);
+                    throw new Error(`HTTP Error: ${response.status}`);
                 }
                 const result = await response.json();
                 const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui entender sua pergunta. Por favor, tente novamente.";
                 return formatAsList(text);
             } catch (error) {
                 console.error("Erro ao chamar a API Gemini:", error);
-                return "Desculpe, ocorreu um erro na comunicação com a IA. Por favor, tente novamente mais tarde.";
+                // Retorna a mensagem de erro que o usuário viu, mas com a causa provável
+                return "Desculpe, ocorreu um erro na comunicação com a IA. **Verifique se sua chave Gemini API está correta e válida.** Por favor, tente novamente mais tarde.";
             }
         }
        
@@ -560,7 +568,7 @@
                 contents: [{ parts: [{ text: prompt }] }],
                 systemInstruction: { parts: [{ text: "Você é um assistente útil especializado em resumir textos longos e complexos de forma simples e direta." }] }
             };
-            const apiKey = GEMINI_API_KEY; // Chave Gemini Inserida
+            const apiKey = GEMINI_API_KEY; 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
            
             try {
@@ -573,7 +581,7 @@
                 return result?.candidates?.[0]?.content?.parts?.[0]?.text || "Não foi possível gerar um resumo.";
             } catch (error) {
                 console.error("Erro ao gerar resumo:", error);
-                return "Erro ao gerar resumo.";
+                return "Erro ao gerar resumo. Verifique a chave Gemini API.";
             }
         }
        
@@ -581,7 +589,7 @@
         function formatAsList(text) {
             const items = text.split(/•\s|\*\s|^\d+\.\s|\n/).filter(item => item.trim() !== '');
             if (items.length > 1) {
-                let listHtml = '<ul>';
+                let listHtml = '<ul class="list-disc ml-5">';
                 items.forEach(item => {
                     const cleanItem = item.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').trim();
                     if (cleanItem) {
@@ -645,6 +653,14 @@
            
             try {
                 const aiResponseText = await getAIResponse(query, prompt, imageData);
+                
+                // Remove a mensagem de loading
+                const messages = container.querySelectorAll('.chat-message');
+                const lastMessage = messages[messages.length - 1];
+                if (lastMessage && lastMessage.innerText.includes('digitando')) {
+                    lastMessage.remove();
+                }
+
                 const aiResponseHtml = `
                     ${aiResponseText}
                     <div class="flex justify-end mt-2 space-x-2">
@@ -666,13 +682,17 @@
 
             } catch (error) {
                 console.error("Erro na requisição:", error);
-                addMessage("Desculpe, ocorreu um erro. Por favor, tente novamente.", 'ai', container);
-            } finally {
+                
+                // Remove a mensagem de loading
                 const messages = container.querySelectorAll('.chat-message');
                 const lastMessage = messages[messages.length - 1];
                 if (lastMessage && lastMessage.innerText.includes('digitando')) {
                     lastMessage.remove();
                 }
+                
+                addMessage("Desculpe, ocorreu um erro. **Verifique se sua chave Gemini API está correta.** Por favor, tente novamente.", 'ai', container);
+            } finally {
+                
                 container.scrollTop = container.scrollHeight;
             }
         }
