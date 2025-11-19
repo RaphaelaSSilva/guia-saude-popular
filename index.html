@@ -226,22 +226,12 @@
         // É AQUI ONDE VOCÊ DEVE COLAR SUA CHAVE!
         const GEMINI_API_KEY = "AIzaSyAH83Z172zxOYggj5bgxzO9-lsN4YgfLuY"; 
 
-        const FIREBASE_APP_ID = "1:593810769765:web:52f6ef3b18eefcafc4c38c";
-        const FIREBASE_CONFIG = {
-            apiKey: "AIzaSyDC1mVuuggLDJlXUt5k_1f5s3COX23hhQg",
-            authDomain: "guiasaude-b85a7.firebaseapp.com",
-            projectId: "guiasaude-b85a7",
-            storageBucket: "guiasaude-b85a7.firebasestorage.app",
-            messagingSenderId: "593810769765",
-            appId: "1:593810769765:web:52f6ef3b18eefcafc4c38c",
-            measurementId: "G-C586M4M1XR"
-        };
-        
-        // Inicialização do Firebase
-        const appId = FIREBASE_APP_ID;
-        const firebaseConfig = FIREBASE_CONFIG;
-        const initialAuthToken = null;
+        // VARIÁVEIS GLOBAIS FORNECIDAS PELA PLATAFORMA (Revisado para conformidade)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { /* Configuração padrão de fallback */ };
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
        
+        // Inicialização do Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -279,6 +269,7 @@
                 console.log("Aguardando autenticação para verificar o cadastro.");
                 return;
             }
+            // Caminho de perfil privado do usuário
             const userDocRef = doc(db, `artifacts/${appId}/users/${uid}/user_data/profile`);
             try {
                 const docSnap = await getDoc(userDocRef);
@@ -376,7 +367,9 @@
             let contentHtml = text;
             if (sender === 'community') {
                 const messageClass = userDisplayName === userId ? 'user' : 'ai';
-                const displayName = userDisplayName === userId ? 'Você' : `Usuário (${userDisplayName.substring(0, 8)}...)`;
+                // Mostra um ID de usuário parcial para identificação
+                const displayId = userDisplayName ? userDisplayName.substring(0, 8) : 'Anônimo'; 
+                const displayName = userDisplayName === userId ? 'Você' : `Usuário (${displayId}...)`;
                 messageDiv.classList.add('chat-message', messageClass, 'p-4', 'rounded-xl', 'shadow-md', 'chat-bubble');
                 contentHtml = `<p class="font-bold text-sm mb-1">${displayName}:</p>${text}`;
             } else {
@@ -396,9 +389,9 @@
                 return;
             }
             console.log("Configurando listener para o usuário:", auth.currentUser.uid);
+            // Caminho de coleção pública
             const communityRef = collection(db, `artifacts/${appId}/public/data/community_chat`);
-            // Adicionamos um limite de 50 mensagens para melhorar o desempenho
-            const q = query(communityRef); // Sem orderBy para evitar a necessidade de índice
+            const q = query(communityRef); 
 
 
             onSnapshot(q, (snapshot) => {
@@ -406,7 +399,10 @@
                 communityContainer.innerHTML = ''; 
                 snapshot.forEach((doc) => {
                     const message = doc.data();
-                    addMessage(message.text, 'community', communityContainer, message.userId);
+                    // Adiciona a mensagem, verificando se o userId existe
+                    if (message.text && message.userId) {
+                        addMessage(message.text, 'community', communityContainer, message.userId);
+                    }
                 });
             }, (error) => {
                 console.error("Erro ao receber mensagens da comunidade:", error);
@@ -461,6 +457,11 @@
        
         // Função para converter texto para fala
         async function speakText(text) {
+            if (!GEMINI_API_KEY) {
+                 console.error("Chave Gemini API não configurada. Não é possível usar TTS.");
+                 return;
+            }
+
             const payload = {
                 contents: [{
                     parts: [{ text: text }]
@@ -475,7 +476,7 @@
                 },
                 model: "gemini-2.5-flash-preview-tts"
             };
-            const apiKey = GEMINI_API_KEY; // Chave Gemini Inserida
+            const apiKey = GEMINI_API_KEY; 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
             try {
                 const response = await fetch(apiUrl, {
@@ -504,16 +505,19 @@
                     audio.play();
                 } else {
                     console.error("Dados de áudio inválidos recebidos.");
-                    // Não adicionar mensagem no chat, pois pode ser um erro silencioso
                 }
             } catch (error) {
                 console.error("Erro ao gerar áudio:", error);
-                // Não adicionar mensagem no chat, pois pode ser um erro silencioso
             }
         }
        
         // Function to call the Gemini API with a specific prompt
         async function getAIResponse(query, prompt, imageData = null) {
+            if (!GEMINI_API_KEY) {
+                 console.error("Chave Gemini API não configurada. Retornando mensagem de erro.");
+                 return "Desculpe, ocorreu um erro na comunicação com a IA. **Verifique se sua chave Gemini API está correta e válida.** Por favor, tente novamente mais tarde.";
+            }
+
             let payload;
             const model = "gemini-2.5-flash-preview-05-20"; // Modelo com Google Search
             
@@ -545,11 +549,12 @@
                     body: JSON.stringify(payload)
                 });
                
-                if (!response.ok) {
+                if (!response.status !== 200) {
                     // Tenta ler o erro do corpo da resposta, se possível
                     const errorBody = await response.text();
                     console.error(`HTTP Error: ${response.status} ${response.statusText}`, errorBody);
-                    throw new Error(`HTTP Error: ${response.status}`);
+                    // O erro mais provável é a chave inválida (status 400 ou 401)
+                    return "Desculpe, ocorreu um erro na comunicação com a IA. **Verifique se sua chave Gemini API está correta e válida.** Por favor, tente novamente mais tarde.";
                 }
                 const result = await response.json();
                 const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui entender sua pergunta. Por favor, tente novamente.";
@@ -563,6 +568,10 @@
        
         // Function to call Gemini for summarization
         async function getAISummary(text) {
+             if (!GEMINI_API_KEY) {
+                 return "Erro: Chave Gemini API não configurada.";
+            }
+
             const prompt = `Resuma o seguinte texto de forma clara e concisa para um leigo, mantendo as informações essenciais. O texto é: "${text}"`;
             const payload = {
                 contents: [{ parts: [{ text: prompt }] }],
@@ -587,6 +596,11 @@
        
         // Função para formatar texto em uma lista HTML
         function formatAsList(text) {
+            // Verifica se o texto é a mensagem de erro da API
+            if (text.includes("Desculpe, ocorreu um erro na comunicação com a IA.")) {
+                 return text;
+            }
+
             const items = text.split(/•\s|\*\s|^\d+\.\s|\n/).filter(item => item.trim() !== '');
             if (items.length > 1) {
                 let listHtml = '<ul class="list-disc ml-5">';
@@ -657,10 +671,12 @@
                 // Remove a mensagem de loading
                 const messages = container.querySelectorAll('.chat-message');
                 const lastMessage = messages[messages.length - 1];
-                if (lastMessage && lastMessage.innerText.includes('digitando')) {
+                // Verifica se a última mensagem é a de loading (usando um método mais robusto)
+                if (lastMessage && lastMessage.innerHTML.includes('digitando')) {
                     lastMessage.remove();
                 }
-
+                
+                // Adiciona a resposta final
                 const aiResponseHtml = `
                     ${aiResponseText}
                     <div class="flex justify-end mt-2 space-x-2">
@@ -686,7 +702,7 @@
                 // Remove a mensagem de loading
                 const messages = container.querySelectorAll('.chat-message');
                 const lastMessage = messages[messages.length - 1];
-                if (lastMessage && lastMessage.innerText.includes('digitando')) {
+                if (lastMessage && lastMessage.innerHTML.includes('digitando')) {
                     lastMessage.remove();
                 }
                 
@@ -743,11 +759,13 @@
                    
                     const messages = chatContainer.querySelectorAll('.chat-message');
                     const lastMessage = messages[messages.length - 1];
-                    if (lastMessage && lastMessage.innerText.includes('Gerando resumo')) {
+                    if (lastMessage && lastMessage.innerHTML.includes('Gerando resumo')) {
                         lastMessage.remove();
                     }
 
 
+                    const summaryMessage = document.createElement('div');
+                    summaryMessage.classList.add('chat-message', 'ai', 'p-4', 'rounded-xl', 'shadow-md', 'chat-bubble');
                     const summaryHtml = `
                         <p class="font-semibold">Resumo:</p>
                         ${summary}
@@ -759,8 +777,6 @@
                             </button>
                         </div>
                     `;
-                    const summaryMessage = document.createElement('div');
-                    summaryMessage.classList.add('chat-message', 'ai', 'p-4', 'rounded-xl', 'shadow-md', 'chat-bubble');
                     summaryMessage.innerHTML = summaryHtml;
                     chatContainer.appendChild(summaryMessage);
                     chatContainer.scrollTop = chatContainer.scrollHeight;
