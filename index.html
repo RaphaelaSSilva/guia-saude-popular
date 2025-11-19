@@ -457,7 +457,7 @@
        
         // Função para converter texto para fala
         async function speakText(text) {
-            if (!GEMINI_API_KEY) {
+            if (!GEMINI_API_KEY || GEMINI_API_KEY === "[INSIRA_A_SUA_CHAVE_GEMINI_AQUI]") {
                  console.error("Chave Gemini API não configurada. Não é possível usar TTS.");
                  return;
             }
@@ -513,8 +513,8 @@
        
         // Function to call the Gemini API with a specific prompt
         async function getAIResponse(query, prompt, imageData = null) {
-            if (!GEMINI_API_KEY) {
-                 console.error("Chave Gemini API não configurada. Retornando mensagem de erro.");
+            // Verifica a chave antes de iniciar a requisição (mais robusto)
+            if (!GEMINI_API_KEY || GEMINI_API_KEY === "[INSIRA_A_SUA_CHAVE_GEMINI_AQUI]") {
                  return "Desculpe, ocorreu um erro na comunicação com a IA. **Verifique se sua chave Gemini API está correta e válida.** Por favor, tente novamente mais tarde.";
             }
 
@@ -549,11 +549,9 @@
                     body: JSON.stringify(payload)
                 });
                
-                if (!response.status !== 200) {
-                    // Tenta ler o erro do corpo da resposta, se possível
+                if (response.status !== 200) {
                     const errorBody = await response.text();
                     console.error(`HTTP Error: ${response.status} ${response.statusText}`, errorBody);
-                    // O erro mais provável é a chave inválida (status 400 ou 401)
                     return "Desculpe, ocorreu um erro na comunicação com a IA. **Verifique se sua chave Gemini API está correta e válida.** Por favor, tente novamente mais tarde.";
                 }
                 const result = await response.json();
@@ -561,14 +559,13 @@
                 return formatAsList(text);
             } catch (error) {
                 console.error("Erro ao chamar a API Gemini:", error);
-                // Retorna a mensagem de erro que o usuário viu, mas com a causa provável
                 return "Desculpe, ocorreu um erro na comunicação com a IA. **Verifique se sua chave Gemini API está correta e válida.** Por favor, tente novamente mais tarde.";
             }
         }
        
         // Function to call Gemini for summarization
         async function getAISummary(text) {
-             if (!GEMINI_API_KEY) {
+             if (!GEMINI_API_KEY || GEMINI_API_KEY === "[INSIRA_A_SUA_CHAVE_GEMINI_AQUI]") {
                  return "Erro: Chave Gemini API não configurada.";
             }
 
@@ -619,6 +616,9 @@
 
         // --- Manipuladores de eventos ---
         async function handleSendMessage(imageData = null) {
+            // LOG DE DIAGNÓSTICO: Veja esta mensagem no Console do navegador!
+            console.log("handleSendMessage chamado."); 
+
             const query = userInput.value.trim();
             if (query === '' && !imageData) return;
 
@@ -656,6 +656,14 @@
             } else if (currentTab === 'prices') {
                 container = document.getElementById('prices');
                 prompt = "Você é um assistente de comparação de preços de medicamentos. Use o Google Search para encontrar e comparar preços de medicamentos entre farmácias populares. Responda de forma clara e concisa, apresentando os preços e as farmácias em formato de lista (bullet points).";
+            }
+
+
+            // **VERIFICAÇÃO DE CHAVE MAIS CEDA**
+            if (!GEMINI_API_KEY || GEMINI_API_KEY === "[INSIRA_A_SUA_CHAVE_GEMINI_AQUI]") {
+                addMessage("ERRO: A chave Gemini API não foi configurada. Insira sua chave para usar a IA.", 'ai', container);
+                userInput.value = '';
+                return;
             }
 
 
@@ -786,3 +794,4 @@
     </script>
 </body>
 </html>
+
