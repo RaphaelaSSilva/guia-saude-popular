@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guia Saúde Popular Inteligente</title>
+    <title>Guia Saúde Popular Inteligente (GSPI)</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- QR Code Library CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body {
@@ -71,48 +74,25 @@
         .image-upload-btn:hover {
             background-color: #357bd8;
         }
+        /* Estilo para o modal do QR Code */
+        .modal {
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen p-4">
-    <!-- Modal de Cadastro -->
-    <div id="register-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm relative">
-            <h2 class="text-2xl font-bold text-slate-800 mb-4 text-center">Cadastro de Usuário</h2>
-            <form id="register-form" class="space-y-4">
-                <div>
-                    <label for="nome" class="block text-sm font-medium text-slate-700">Nome</label>
-                    <input type="text" id="nome" name="nome" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
-                </div>
-                <div>
-                    <label for="bairro" class="block text-sm font-medium text-slate-700">Bairro (em São Gonçalo)</label>
-                    <select id="bairro" name="bairro" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
-                        <option value="" disabled selected>Selecione seu bairro</option>
-                        <option value="Alcântara">Alcântara</option>
-                        <option value="Boa Vista">Boa Vista</option>
-                        <option value="Colubandê">Colubandê</option>
-                        <option value="Centro">Centro</option>
-                        <option value="Mutuá">Mutuá</option>
-                        <option value="Trindade">Trindade</option>
-                        <option value="Jardim Catarina">Jardim Catarina</option>
-                        <option value="Laranjal">Laranjal</option>
-                        <option value="Ipiiba">Ipiiba</option>
-                        <option value="Santa Luzia">Santa Luzia</option>
-                        <option value="Zé Garoto">Zé Garoto</option>
-                        <option value="Porto Velho">Porto Velho</option>
-                        <option value="Outro">Outro</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="email" class="block text-sm font-medium text-slate-700">Email</label>
-                    <input type="email" id="email" name="email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
-                </div>
-                <div class="flex justify-center items-center">
-                    <button type="submit" id="register-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-300 flex justify-center items-center">
-                        Cadastrar
-                    </button>
-                </div>
-            </form>
-            <div id="register-status" class="mt-4 text-center text-sm"></div>
+
+    <!-- Modal do QR Code -->
+    <div id="qrcode-modal" class="modal hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-xs relative text-center">
+            <h2 class="text-xl font-bold text-slate-800 mb-4">QR Code do Site</h2>
+            <p class="text-sm text-slate-600 mb-4">Partilhe este código para aceder ao **GSPI** no seu dispositivo móvel.</p>
+            <div id="qrcode-container" class="flex justify-center p-2 bg-slate-100 rounded-lg">
+                <!-- O QR Code será desenhado aqui -->
+            </div>
+            <button id="close-qrcode-modal" class="mt-6 w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-300">
+                Fechar
+            </button>
         </div>
     </div>
 
@@ -121,29 +101,40 @@
         <!-- Cabeçalho -->
         <header class="bg-slate-900 text-white p-6 rounded-t-2xl shadow-lg">
             <h1 class="text-3xl font-bold text-center">Guia Saúde Popular Inteligente</h1>
-            <p class="text-center mt-2 text-slate-300">Seu assistente virtual para a área de saúde e comunidade.</p>
+            <p class="text-center mt-2 text-slate-300">O seu assistente virtual para a área de saúde e comunidade.</p>
+            <div class="flex justify-center mt-3">
+                <button id="open-qrcode-modal" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-full transition duration-300 shadow-md flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V3zm4 4h6V5H7v2zm0 4h6v-2H7v2zm-2 2h2v2H5v-2zm6 0h2v2h-2v-2zm-6 2h2v2H5v-2zm6 2h2v2h-2v-2z" clip-rule="evenodd" />
+                    </svg>
+                    Gerar QR Code
+                </button>
+            </div>
+            <p id="auth-status" class="text-center mt-2 font-medium text-sm text-red-400">
+                AVISO: Chave Gemini API não configurada. O Chatbot não funcionará.
+            </p>
         </header>
 
 
-        <!-- Botões de abas -->
+        <!-- Botões de separadores -->
         <div class="flex bg-slate-200 border-b border-slate-300">
             <button class="tab-button flex-1 p-4 font-semibold text-slate-700 transition duration-300 active" data-tab="chatbot">Chatbot de Saúde</button>
             <button class="tab-button flex-1 p-4 font-semibold text-slate-700 transition duration-300" data-tab="prices">Comparação de Preços</button>
-            <button class="tab-button flex-1 p-4 font-semibold text-slate-700 transition duration-300" data-tab="community">Comunidade</button>
+            <!-- O separador Comunidade foi removido para evitar problemas de segurança/configuração no GitHub Pages. -->
         </div>
 
 
-        <!-- Conteúdo das abas -->
+        <!-- Conteúdo dos separadores -->
         <div id="chatbot" class="tab-content flex-1 p-6 space-y-4 overflow-y-auto">
             <div class="chat-message ai p-4 rounded-xl shadow-md chat-bubble">
-                Olá! Sou seu guia de saúde. Posso ajudar a encontrar UBS, hospitais, farmácias e clínicas acessíveis, comparar preços de medicamentos ou responder a outras perguntas de saúde.
+                Olá! Sou o seu guia de saúde. Posso ajudar a encontrar UBS, hospitais, farmácias e clínicas acessíveis, comparar preços de medicamentos ou responder a outras perguntas de saúde.
                 <div class="flex justify-end mt-2 space-x-2">
-                    <button class="speak-btn ml-2" data-text="Olá! Sou seu guia de saúde. Posso ajudar a encontrar UBS, hospitais, farmácias e clínicas acessíveis, comparar preços de medicamentos ou responder a outras perguntas de saúde.">
+                    <button class="speak-btn ml-2" data-text="Olá! Sou o seu guia de saúde. Posso ajudar a encontrar UBS, hospitais, farmácias e clínicas acessíveis, comparar preços de medicamentos ou responder a outras perguntas de saúde.">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600 hover:text-blue-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.536 8.464a5 5 0 010 7.072M2.708 5.636a9 9 0 010 12.728M12 10.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
                         </svg>
                     </button>
-                    <button class="summary-btn" data-text="Olá! Sou seu guia de saúde. Posso ajudar a encontrar UBS, hospitais, farmácias e clínicas acessíveis, comparar preços de medicamentos ou responder a outras perguntas de saúde.">
+                    <button class="summary-btn" data-text="Olá! Sou o seu guia de saúde. Posso ajudar a encontrar UBS, hospitais, farmácias e clínicas acessíveis, comparar preços de medicamentos ou responder a outras perguntas de saúde.">
                         ✨ Resumir
                     </button>
                 </div>
@@ -153,24 +144,17 @@
 
         <div id="prices" class="tab-content flex-1 p-6 space-y-4 overflow-y-auto hidden">
             <div class="chat-message ai p-4 rounded-xl shadow-md chat-bubble">
-                Olá! Posso ajudar a comparar preços de medicamentos. Basta digitar o nome do medicamento que você precisa.
+                Olá! Posso ajudar a comparar preços de medicamentos. Basta digitar o nome do medicamento que precisa.
                 <div class="flex justify-end mt-2 space-x-2">
-                    <button class="speak-btn ml-2" data-text="Olá! Posso ajudar a comparar preços de medicamentos. Basta digitar o nome do medicamento que você precisa.">
+                    <button class="speak-btn ml-2" data-text="Olá! Posso ajudar a comparar preços de medicamentos. Basta digitar o nome do medicamento que precisa.">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600 hover:text-blue-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.536 8.464a5 5 0 010 7.072M2.708 5.636a9 9 0 010 12.728M12 10.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
                         </svg>
                     </button>
-                    <button class="summary-btn" data-text="Olá! Posso ajudar a comparar preços de medicamentos. Basta digitar o nome do medicamento que você precisa.">
+                    <button class="summary-btn" data-text="Olá! Posso ajudar a comparar preços de medicamentos. Basta digitar o nome do medicamento que precisa.">
                         ✨ Resumir
                     </button>
                 </div>
-            </div>
-        </div>
-
-
-        <div id="community" class="tab-content flex-1 p-6 space-y-4 overflow-y-auto hidden">
-            <div id="community-messages" class="flex flex-col space-y-4">
-                <!-- As mensagens da comunidade serão inseridas aqui -->
             </div>
         </div>
 
@@ -185,7 +169,7 @@
                     </svg>
                 </button>
                 <div class="relative flex-1">
-                    <input type="text" id="user-input" placeholder="Pergunte sobre saúde, preços ou converse com a comunidade..."
+                    <input type="text" id="user-input" placeholder="Pergunte sobre saúde ou preços..."
                            class="w-full pl-4 pr-16 py-3 rounded-full border-2 border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600 transition duration-300">
                     <button id="send-btn" class="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white p-2 rounded-full shadow-lg hover:bg-blue-700 transition duration-300">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -198,145 +182,37 @@
     </div>
 
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDoc, addDoc, query, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script>
+        // --- CONFIGURAÇÃO DE CHAVE GEMINI ---
+        // Se você estiver no Canvas, a chave será preenchida automaticamente.
+        // Se estiver no GitHub Pages, você DEVE inserir a sua chave API AQUI para o Chatbot funcionar.
+        // NUNCA faça commit da sua chave em um repositório público! Use um placeholder vazio.
+        const CANVAS_API_KEY = typeof __api_key !== 'undefined' ? __api_key : "AIzaSyAH83Z172zxOYggj5bgxzO9-lsN4YgfLuY"; 
+        const GEMINI_API_KEY = CANVAS_API_KEY || ""; // Insira manualmente a sua chave aqui: "SUA_CHAVE_AQUI"
+        
+        // --- AVISO DE CHAVE ---
+        const authStatusElement = document.getElementById('auth-status');
+        if (GEMINI_API_KEY === "") {
+             authStatusElement.textContent = 'AVISO: Chave Gemini API não configurada. O Chatbot não funcionará.';
+             authStatusElement.classList.add('text-red-400');
+        } else {
+             authStatusElement.textContent = 'Chatbot ativado com chave API.';
+             authStatusElement.classList.remove('text-red-400');
+             authStatusElement.classList.add('text-green-500');
+        }
 
 
         const userInput = document.getElementById('user-input');
         const sendBtn = document.getElementById('send-btn');
         const chatContainer = document.getElementById('chatbot');
-        const communityContainer = document.getElementById('community-messages');
-        const registerModal = document.getElementById('register-modal');
-        const registerForm = document.getElementById('register-form');
-        const registerBtn = document.getElementById('register-btn');
-        const registerStatus = document.getElementById('register-status');
         const tabs = document.querySelectorAll('.tab-button');
         const tabContents = document.querySelectorAll('.tab-content');
         const imageUploadBtn = document.getElementById('image-upload-btn');
         const imageUpload = document.getElementById('image-upload');
         let currentTab = 'chatbot';
-        let userId;
-        let isAuthReady = false;
 
 
-        // --- CONFIGURAÇÃO DE CREDENCIAIS (FORNECIDAS PELO USUÁRIO) ---
-        // ATENÇÃO: SUBSTITUA ESTE VALOR PELA SUA NOVA CHAVE DE API GEMINI REAL.
-        // É AQUI ONDE VOCÊ DEVE COLAR SUA CHAVE!
-        const GEMINI_API_KEY = "AIzaSyAH83Z172zxOYggj5bgxzO9-lsN4YgfLuY"; 
-
-        // VARIÁVEIS GLOBAIS FORNECIDAS PELA PLATAFORMA (Revisado para conformidade)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { /* Configuração padrão de fallback */ };
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-       
-        // Inicialização do Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-
-        // --- Autenticação do Firebase ---
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                userId = user.uid;
-                isAuthReady = true;
-                console.log("Usuário autenticado:", userId);
-                await checkUserRegistration(userId);
-                setupCommunityChat();
-            } else {
-                console.log("Nenhum usuário logado. Entrando anonimamente.");
-                isAuthReady = false;
-                await signInAnonymously(auth);
-            }
-        });
-
-
-        if (initialAuthToken) {
-            signInWithCustomToken(auth, initialAuthToken).catch((error) => {
-                console.error("Erro ao fazer login com token personalizado:", error);
-                signInAnonymously(auth);
-            });
-        } else {
-            signInAnonymously(auth);
-        }
-
-
-        // --- Lógica de Cadastro (Modal) ---
-        async function checkUserRegistration(uid) {
-            if (!isAuthReady) {
-                console.log("Aguardando autenticação para verificar o cadastro.");
-                return;
-            }
-            // Caminho de perfil privado do usuário
-            const userDocRef = doc(db, `artifacts/${appId}/users/${uid}/user_data/profile`);
-            try {
-                const docSnap = await getDoc(userDocRef);
-                if (!docSnap.exists()) {
-                    registerModal.classList.remove('hidden');
-                }
-            } catch (error) {
-                console.error("Erro ao verificar o cadastro:", error);
-            }
-        }
-
-
-        async function handleRegister(event) {
-            event.preventDefault();
-           
-            if (!isAuthReady) {
-                registerStatus.textContent = 'Aguarde a autenticação para se cadastrar.';
-                registerStatus.classList.add('text-red-500');
-                return;
-            }
-
-
-            registerBtn.disabled = true;
-            registerBtn.innerHTML = '<div class="spinner"></div>';
-            registerStatus.textContent = '';
-
-
-            const nome = document.getElementById('nome').value;
-            const bairro = document.getElementById('bairro').value;
-            const email = document.getElementById('email').value;
-
-
-            try {
-                const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/user_data/profile`);
-                await setDoc(userDocRef, {
-                    nome: nome,
-                    bairro: bairro,
-                    email: email,
-                    registeredAt: serverTimestamp()
-                });
-               
-                registerStatus.textContent = 'Cadastro realizado com sucesso!';
-                registerStatus.classList.remove('text-red-500');
-                registerStatus.classList.add('text-green-500');
-
-
-                // Esconder o modal após o cadastro
-                setTimeout(() => {
-                    registerModal.classList.add('hidden');
-                }, 1500);
-
-
-            } catch (error) {
-                console.error("Erro ao cadastrar usuário:", error);
-                registerStatus.textContent = 'Erro ao realizar o cadastro. Tente novamente.';
-                registerStatus.classList.remove('text-green-500');
-                registerStatus.classList.add('text-red-500');
-            } finally {
-                registerBtn.disabled = false;
-                registerBtn.innerHTML = 'Cadastrar';
-            }
-        }
-       
-        registerForm.addEventListener('submit', handleRegister);
-
-
-        // --- Lógica de troca de abas ---
+        // --- Lógica de troca de separadores ---
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 tabs.forEach(t => t.classList.remove('active'));
@@ -347,73 +223,17 @@
                 currentTab = tab.dataset.tab;
 
 
-                if (currentTab === 'community') {
-                    userInput.placeholder = "Escreva sua mensagem para a comunidade...";
-                } else if (currentTab === 'prices') {
+                if (currentTab === 'prices') {
                     userInput.placeholder = "Digite o nome do medicamento para comparar preços...";
                 } else {
-                    userInput.placeholder = "Pergunte sobre saúde, preços ou converse com a comunidade...";
+                    userInput.placeholder = "Pergunte sobre saúde...";
                 }
             });
         });
 
 
-        // --- Funções de Chat e Comunidade ---
+        // --- Funções Auxiliares (TTS e API) ---
 
-
-        // Função para adicionar uma mensagem ao chat
-        function addMessage(text, sender, container, userDisplayName = '') {
-            const messageDiv = document.createElement('div');
-            let contentHtml = text;
-            if (sender === 'community') {
-                const messageClass = userDisplayName === userId ? 'user' : 'ai';
-                // Mostra um ID de usuário parcial para identificação
-                const displayId = userDisplayName ? userDisplayName.substring(0, 8) : 'Anônimo'; 
-                const displayName = userDisplayName === userId ? 'Você' : `Usuário (${displayId}...)`;
-                messageDiv.classList.add('chat-message', messageClass, 'p-4', 'rounded-xl', 'shadow-md', 'chat-bubble');
-                contentHtml = `<p class="font-bold text-sm mb-1">${displayName}:</p>${text}`;
-            } else {
-                messageDiv.classList.add('chat-message', sender, 'p-4', 'rounded-xl', 'shadow-md', 'chat-bubble');
-            }
-            messageDiv.innerHTML = contentHtml;
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
-            return messageDiv;
-        }
-
-
-        // Função para configurar o chat da comunidade em tempo real
-        function setupCommunityChat() {
-            if (!isAuthReady || !auth.currentUser) {
-                console.log("Aguardando autenticação para configurar o chat da comunidade.");
-                return;
-            }
-            console.log("Configurando listener para o usuário:", auth.currentUser.uid);
-            // Caminho de coleção pública
-            const communityRef = collection(db, `artifacts/${appId}/public/data/community_chat`);
-            const q = query(communityRef); 
-
-
-            onSnapshot(q, (snapshot) => {
-                // Remove o conteúdo antigo para reconstruir a lista (ajustado para ser mais eficiente)
-                communityContainer.innerHTML = ''; 
-                snapshot.forEach((doc) => {
-                    const message = doc.data();
-                    // Adiciona a mensagem, verificando se o userId existe
-                    if (message.text && message.userId) {
-                        addMessage(message.text, 'community', communityContainer, message.userId);
-                    }
-                });
-            }, (error) => {
-                console.error("Erro ao receber mensagens da comunidade:", error);
-            });
-        }
-
-
-        // --- Funções de IA e TTS ---
-
-
-        // Função para converter base64 para ArrayBuffer
         function base64ToArrayBuffer(base64) {
             const binary_string = window.atob(base64);
             const len = binary_string.length;
@@ -424,8 +244,6 @@
             return bytes.buffer;
         }
 
-
-        // Função para converter PCM para WAV
         function pcmToWav(pcm16, sampleRate) {
             const numChannels = 1;
             const bytesPerSample = 2;
@@ -455,29 +273,22 @@
             return new Blob([view], { type: 'audio/wav' });
         }
        
-        // Função para converter texto para fala
         async function speakText(text) {
-            if (!GEMINI_API_KEY || GEMINI_API_KEY === "[INSIRA_A_SUA_CHAVE_GEMINI_AQUI]") {
+            if (!GEMINI_API_KEY) {
                  console.error("Chave Gemini API não configurada. Não é possível usar TTS.");
                  return;
             }
 
             const payload = {
-                contents: [{
-                    parts: [{ text: text }]
-                }],
+                contents: [{ parts: [{ text: text }] }],
                 generationConfig: {
                     responseModalities: ["AUDIO"],
-                    speechConfig: {
-                        voiceConfig: {
-                            prebuiltVoiceConfig: { voiceName: "Puck" }
-                        }
-                    }
+                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } }
                 },
                 model: "gemini-2.5-flash-preview-tts"
             };
-            const apiKey = GEMINI_API_KEY; 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${GEMINI_API_KEY}`;
             try {
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -485,18 +296,19 @@
                     body: JSON.stringify(payload)
                 });
 
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const result = await response.json();
                 const part = result?.candidates?.[0]?.content?.parts?.[0];
                 const audioData = part?.inlineData?.data;
                 const mimeType = part?.inlineData?.mimeType;
 
-
                 if (audioData && mimeType && mimeType.startsWith("audio/L16")) {
-                    const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
+                    let sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                    let sampleRate = 16000;
+                    if (sampleRateMatch && sampleRateMatch[1]) {
+                        sampleRate = parseInt(sampleRateMatch[1], 10);
+                    }
+                    
                     const pcmData = base64ToArrayBuffer(audioData);
                     const pcm16 = new Int16Array(pcmData);
                     const wavBlob = pcmToWav(pcm16, sampleRate);
@@ -504,22 +316,49 @@
                     const audio = new Audio(audioUrl);
                     audio.play();
                 } else {
-                    console.error("Dados de áudio inválidos recebidos.");
+                    console.error("Dados de áudio inválidos recebidos ou MIME type inesperado:", mimeType);
                 }
             } catch (error) {
                 console.error("Erro ao gerar áudio:", error);
             }
         }
+
+        async function fetchWithExponentialBackoff(payload, apiUrl, maxRetries = 5, baseDelay = 1000) {
+             for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (response.ok) {
+                        return response;
+                    }
+
+                    const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000;
+                    if (attempt < maxRetries - 1) {
+                         await new Promise(resolve => setTimeout(resolve, delay));
+                    } else {
+                        throw new Error(`Falha na comunicação com a API após ${maxRetries} tentativas.`);
+                    }
+                } catch (error) {
+                    if (attempt === maxRetries - 1) {
+                        throw error;
+                    }
+                    const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
        
-        // Function to call the Gemini API with a specific prompt
         async function getAIResponse(query, prompt, imageData = null) {
-            // Verifica a chave antes de iniciar a requisição (mais robusto)
-            if (!GEMINI_API_KEY || GEMINI_API_KEY === "[INSIRA_A_SUA_CHAVE_GEMINI_AQUI]") {
-                 return "Desculpe, ocorreu um erro na comunicação com a IA. **Verifique se sua chave Gemini API está correta e válida.** Por favor, tente novamente mais tarde.";
+            if (!GEMINI_API_KEY) {
+                 return "Desculpe, ocorreu um erro na comunicação com a IA. **A chave Gemini API está vazia ou não configurada.** Por favor, insira a sua chave para usar o Chatbot.";
             }
 
             let payload;
-            const model = "gemini-2.5-flash-preview-05-20"; // Modelo com Google Search
+            const model = "gemini-2.5-flash-preview-09-2025";
             
             if (imageData) {
                 payload = {
@@ -539,33 +378,27 @@
                 };
             }
        
-            const apiKey = GEMINI_API_KEY; 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
        
             try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                const response = await fetchWithExponentialBackoff(payload, apiUrl);
                
                 if (response.status !== 200) {
                     const errorBody = await response.text();
                     console.error(`HTTP Error: ${response.status} ${response.statusText}`, errorBody);
-                    return "Desculpe, ocorreu um erro na comunicação com a IA. **Verifique se sua chave Gemini API está correta e válida.** Por favor, tente novamente mais tarde.";
+                    return "Desculpe, ocorreu um erro na comunicação com a IA. **Erro HTTP.** Por favor, tente novamente mais tarde.";
                 }
                 const result = await response.json();
-                const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui entender sua pergunta. Por favor, tente novamente.";
+                const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui entender a sua pergunta. Por favor, tente novamente.";
                 return formatAsList(text);
             } catch (error) {
                 console.error("Erro ao chamar a API Gemini:", error);
-                return "Desculpe, ocorreu um erro na comunicação com a IA. **Verifique se sua chave Gemini API está correta e válida.** Por favor, tente novamente mais tarde.";
+                return "Desculpe, ocorreu um erro na comunicação com a IA. **Erro de rede ou exceção.** Por favor, tente novamente mais tarde.";
             }
         }
        
-        // Function to call Gemini for summarization
         async function getAISummary(text) {
-             if (!GEMINI_API_KEY || GEMINI_API_KEY === "[INSIRA_A_SUA_CHAVE_GEMINI_AQUI]") {
+             if (!GEMINI_API_KEY) {
                  return "Erro: Chave Gemini API não configurada.";
             }
 
@@ -574,15 +407,10 @@
                 contents: [{ parts: [{ text: prompt }] }],
                 systemInstruction: { parts: [{ text: "Você é um assistente útil especializado em resumir textos longos e complexos de forma simples e direta." }] }
             };
-            const apiKey = GEMINI_API_KEY; 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
            
             try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                const response = await fetchWithExponentialBackoff(payload, apiUrl);
                 const result = await response.json();
                 return result?.candidates?.[0]?.content?.parts?.[0]?.text || "Não foi possível gerar um resumo.";
             } catch (error) {
@@ -590,10 +418,8 @@
                 return "Erro ao gerar resumo. Verifique a chave Gemini API.";
             }
         }
-       
-        // Função para formatar texto em uma lista HTML
+        
         function formatAsList(text) {
-            // Verifica se o texto é a mensagem de erro da API
             if (text.includes("Desculpe, ocorreu um erro na comunicação com a IA.")) {
                  return text;
             }
@@ -602,7 +428,7 @@
             if (items.length > 1) {
                 let listHtml = '<ul class="list-disc ml-5">';
                 items.forEach(item => {
-                    const cleanItem = item.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').trim();
+                    const cleanItem = item.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').trim(); 
                     if (cleanItem) {
                         listHtml += `<li class="my-2">${cleanItem}</li>`;
                     }
@@ -610,43 +436,30 @@
                 listHtml += '</ul>';
                 return listHtml;
             }
-            return text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+            return text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>'); 
         }
 
+        // --- Funções de Chat ---
 
-        // --- Manipuladores de eventos ---
+        function addMessage(text, sender, container) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('chat-message', sender, 'p-4', 'rounded-xl', 'shadow-md', 'chat-bubble');
+            messageDiv.innerHTML = text;
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+            return messageDiv;
+        }
+
         async function handleSendMessage(imageData = null) {
-            // LOG DE DIAGNÓSTICO: Veja esta mensagem no Console do navegador!
-            console.log("handleSendMessage chamado."); 
-
             const query = userInput.value.trim();
             if (query === '' && !imageData) return;
 
 
-            // Lidar com mensagens da Comunidade
-            if (currentTab === 'community') {
-                if (isAuthReady) {
-                    const communityRef = collection(db, `artifacts/${appId}/public/data/community_chat`);
-                    await addDoc(communityRef, {
-                        text: query,
-                        userId: userId,
-                        timestamp: serverTimestamp()
-                    });
-                    userInput.value = '';
-                } else {
-                    const container = document.getElementById('community');
-                    addMessage("Aguarde a autenticação para enviar mensagens.", 'ai', container);
-                }
-                return;
-            }
-
-
-            // Lidar com mensagens do Chatbot e Comparação de Preços
             let container = chatContainer;
             let prompt = "";
             let senderMessage = query;
             if (imageData) {
-                 senderMessage = `<div class="p-2 border rounded-xl"><img src="data:image/png;base64,${imageData}" class="max-w-xs max-h-48 rounded-lg mb-2 mx-auto" alt="Imagem enviada pelo usuário"></div>${query}`;
+                 senderMessage = `<div class="p-2 border rounded-xl"><img src="data:image/png;base64,${imageData}" class="max-w-xs max-h-48 rounded-lg mb-2 mx-auto" alt="Imagem enviada pelo utilizador"></div>${query}`;
             }
 
 
@@ -658,42 +471,35 @@
                 prompt = "Você é um assistente de comparação de preços de medicamentos. Use o Google Search para encontrar e comparar preços de medicamentos entre farmácias populares. Responda de forma clara e concisa, apresentando os preços e as farmácias em formato de lista (bullet points).";
             }
 
-
-            // **VERIFICAÇÃO DE CHAVE MAIS CEDA**
-            if (!GEMINI_API_KEY || GEMINI_API_KEY === "[INSIRA_A_SUA_CHAVE_GEMINI_AQUI]") {
-                addMessage("ERRO: A chave Gemini API não foi configurada. Insira sua chave para usar a IA.", 'ai', container);
+            if (!GEMINI_API_KEY) {
+                addMessage("ERRO: A chave Gemini API não foi configurada. Insira a sua chave para usar a IA.", 'ai', container);
                 userInput.value = '';
                 return;
             }
 
-
             addMessage(senderMessage, 'user', container);
             userInput.value = '';
 
-
-            const loadingMessage = addMessage('<div class="flex items-center space-x-2 text-gray-500"><span class="animate-pulse">... digitando ...</span></div>', 'ai', container);
+            const loadingMessage = addMessage('<div class="flex items-center space-x-2 text-gray-500"><div class="spinner"></div><span class="ml-2">... a escrever ...</span></div>', 'ai', container);
            
             try {
                 const aiResponseText = await getAIResponse(query, prompt, imageData);
                 
-                // Remove a mensagem de loading
                 const messages = container.querySelectorAll('.chat-message');
                 const lastMessage = messages[messages.length - 1];
-                // Verifica se a última mensagem é a de loading (usando um método mais robusto)
-                if (lastMessage && lastMessage.innerHTML.includes('digitando')) {
+                if (lastMessage && lastMessage.innerHTML.includes('a escrever')) {
                     lastMessage.remove();
                 }
                 
-                // Adiciona a resposta final
                 const aiResponseHtml = `
                     ${aiResponseText}
                     <div class="flex justify-end mt-2 space-x-2">
-                        <button class="speak-btn" data-text="${aiResponseText.replace(/"/g, '&quot;')}">
+                        <button class="speak-btn" data-text="${aiResponseText.replace(/"/g, '&quot;').replace(/<[^>]*>?/gm, '')}">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600 hover:text-blue-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.536 8.464a5 5 0 010 7.072M2.708 5.636a9 9 0 010 12.728M12 10.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
                             </svg>
                         </button>
-                        <button class="summary-btn" data-text="${aiResponseText.replace(/"/g, '&quot;')}">
+                        <button class="summary-btn" data-text="${aiResponseText.replace(/"/g, '&quot;').replace(/<[^>]*>?/gm, '')}">
                             ✨ Resumir
                         </button>
                     </div>
@@ -705,16 +511,15 @@
 
 
             } catch (error) {
-                console.error("Erro na requisição:", error);
+                console.error("Erro na requisição da IA:", error);
                 
-                // Remove a mensagem de loading
                 const messages = container.querySelectorAll('.chat-message');
                 const lastMessage = messages[messages.length - 1];
-                if (lastMessage && lastMessage.innerHTML.includes('digitando')) {
+                if (lastMessage && lastMessage.innerHTML.includes('a escrever')) {
                     lastMessage.remove();
                 }
                 
-                addMessage("Desculpe, ocorreu um erro. **Verifique se sua chave Gemini API está correta.** Por favor, tente novamente.", 'ai', container);
+                addMessage("Desculpe, ocorreu um erro. **Verifique se a sua chave Gemini API está correta.** Por favor, tente novamente.", 'ai', container);
             } finally {
                 
                 container.scrollTop = container.scrollHeight;
@@ -728,7 +533,6 @@
                 handleSendMessage();
             }
         });
-        registerForm.addEventListener('submit', handleRegister);
 
 
         imageUploadBtn.addEventListener('click', () => {
@@ -751,47 +555,82 @@
 
 
         document.addEventListener('click', async (e) => {
+            // Lógica para o botão de TTS
             if (e.target.closest('.speak-btn')) {
                 const button = e.target.closest('.speak-btn');
-                const textToSpeak = button.getAttribute('data-text');
+                const textToSpeak = button.getAttribute('data-text').replace(/<[^>]*>?/gm, ''); 
                 if (textToSpeak) {
                     speakText(textToSpeak);
                 }
             }
+            
+            // Lógica para o botão de Resumo
             if (e.target.closest('.summary-btn')) {
                 const button = e.target.closest('.summary-btn');
-                const textToSummarize = button.getAttribute('data-text');
+                const textToSummarize = button.getAttribute('data-text').replace(/<[^>]*>?/gm, '');
+                
                 if (textToSummarize) {
-                    const loadingMessage = addMessage('<div class="flex items-center space-x-2 text-gray-500"><span class="animate-pulse">Gerando resumo...</span></div>', 'ai', chatContainer);
+                    const loadingMessage = addMessage('<div class="flex items-center space-x-2 text-gray-500"><div class="spinner"></div><span class="ml-2">A gerar resumo...</span></div>', 'ai', chatContainer);
                     const summary = await getAISummary(textToSummarize);
                    
                     const messages = chatContainer.querySelectorAll('.chat-message');
                     const lastMessage = messages[messages.length - 1];
-                    if (lastMessage && lastMessage.innerHTML.includes('Gerando resumo')) {
+                    
+                    if (lastMessage && lastMessage.innerHTML.includes('A gerar resumo')) {
                         lastMessage.remove();
                     }
 
 
                     const summaryMessage = document.createElement('div');
                     summaryMessage.classList.add('chat-message', 'ai', 'p-4', 'rounded-xl', 'shadow-md', 'chat-bubble');
-                    const summaryHtml = `
-                        <p class="font-semibold">Resumo:</p>
-                        ${summary}
-                        <div class="flex justify-end mt-2 space-x-2">
-                            <button class="speak-btn" data-text="${summary.replace(/"/g, '&quot;')}">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600 hover:text-blue-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.536 8.464a5 5 0 010 7.072M2.708 5.636a9 9 0 010 12.728M12 10.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
-                                </svg>
-                            </button>
-                        </div>
-                    `;
-                    summaryMessage.innerHTML = summaryHtml;
+                    summaryMessage.innerHTML = `<p class="font-bold mb-1">Resumo Gerado:</p>${summary.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')}`; 
                     chatContainer.appendChild(summaryMessage);
                     chatContainer.scrollTop = chatContainer.scrollHeight;
                 }
             }
         });
+
+
+        // --- Lógica do QR Code ---
+        const qrcodeModal = document.getElementById('qrcode-modal');
+        const openQrcodeModalBtn = document.getElementById('open-qrcode-modal');
+        const closeQrcodeModalBtn = document.getElementById('close-qrcode-modal');
+        const qrcodeContainer = document.getElementById('qrcode-container');
+
+        // Função para gerar o QR Code
+        function generateQRCode(url) {
+            qrcodeContainer.innerHTML = ''; // Limpa o conteúdo anterior
+            // A biblioteca QRCode.js desenha o código dentro do container
+            new QRCode(qrcodeContainer, {
+                text: url,
+                width: 200,
+                height: 200,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        }
+        
+        // Abrir Modal
+        openQrcodeModalBtn.addEventListener('click', () => {
+            const currentUrl = window.location.href;
+            qrcodeModal.classList.remove('hidden');
+            // Gera o QR Code com a URL atual do site
+            generateQRCode(currentUrl);
+        });
+
+        // Fechar Modal
+        closeQrcodeModalBtn.addEventListener('click', () => {
+            qrcodeModal.classList.add('hidden');
+        });
+
+        // Fechar ao clicar fora do modal
+        qrcodeModal.addEventListener('click', (e) => {
+            if (e.target === qrcodeModal) {
+                qrcodeModal.classList.add('hidden');
+            }
+        });
+
     </script>
 </body>
 </html>
-
