@@ -6,8 +6,12 @@
     <title>Guia Saúde Popular Inteligente (GSPI)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- QR Code Library CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    
+    <!-- FIREBASE CDNs PARA A COMUNIDADE -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body {
@@ -42,14 +46,10 @@
             border-left-color: #007BFF;
             animation: spin 1s ease infinite;
         }
-
-
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-
         .summary-btn {
             background: #e2e8f0;
             color: #4a5568;
@@ -74,44 +74,20 @@
         .image-upload-btn:hover {
             background-color: #357bd8;
         }
-        /* Estilo para o modal do QR Code */
-        .modal {
-            transition: opacity 0.3s ease, visibility 0.3s ease;
+        .post-card {
+            border-bottom: 1px solid #e5e7eb;
         }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen p-4">
-
-    <!-- Modal do QR Code -->
-    <div id="qrcode-modal" class="modal hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-xs relative text-center">
-            <h2 class="text-xl font-bold text-slate-800 mb-4">QR Code do Site</h2>
-            <p class="text-sm text-slate-600 mb-4">Partilhe este código para aceder ao **GSPI** no seu dispositivo móvel.</p>
-            <div id="qrcode-container" class="flex justify-center p-2 bg-slate-100 rounded-lg">
-                <!-- O QR Code será desenhado aqui -->
-            </div>
-            <button id="close-qrcode-modal" class="mt-6 w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-300">
-                Fechar
-            </button>
-        </div>
-    </div>
-
 
     <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col h-[90vh]">
         <!-- Cabeçalho -->
         <header class="bg-slate-900 text-white p-6 rounded-t-2xl shadow-lg">
             <h1 class="text-3xl font-bold text-center">Guia Saúde Popular Inteligente</h1>
             <p class="text-center mt-2 text-slate-300">O seu assistente virtual para a área de saúde e comunidade.</p>
-            <div class="flex justify-center mt-3">
-                <button id="open-qrcode-modal" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-full transition duration-300 shadow-md flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V3zm4 4h6V5H7v2zm0 4h6v-2H7v2zm-2 2h2v2H5v-2zm6 0h2v2h-2v-2zm-6 2h2v2H5v-2zm6 2h2v2h-2v-2z" clip-rule="evenodd" />
-                    </svg>
-                    Gerar QR Code
-                </button>
-            </div>
             <p id="auth-status" class="text-center mt-2 font-medium text-sm text-red-400">
-                AVISO: Chave Gemini API não configurada. O Chatbot não funcionará.
+                A carregar...
             </p>
         </header>
 
@@ -120,11 +96,12 @@
         <div class="flex bg-slate-200 border-b border-slate-300">
             <button class="tab-button flex-1 p-4 font-semibold text-slate-700 transition duration-300 active" data-tab="chatbot">Chatbot de Saúde</button>
             <button class="tab-button flex-1 p-4 font-semibold text-slate-700 transition duration-300" data-tab="prices">Comparação de Preços</button>
-            <!-- O separador Comunidade foi removido para evitar problemas de segurança/configuração no GitHub Pages. -->
+            <button class="tab-button flex-1 p-4 font-semibold text-slate-700 transition duration-300" data-tab="community">Comunidade</button>
         </div>
 
 
         <!-- Conteúdo dos separadores -->
+        <!-- Chatbot -->
         <div id="chatbot" class="tab-content flex-1 p-6 space-y-4 overflow-y-auto">
             <div class="chat-message ai p-4 rounded-xl shadow-md chat-bubble">
                 Olá! Sou o seu guia de saúde. Posso ajudar a encontrar UBS, hospitais, farmácias e clínicas acessíveis, comparar preços de medicamentos ou responder a outras perguntas de saúde.
@@ -141,7 +118,7 @@
             </div>
         </div>
 
-
+        <!-- Preços -->
         <div id="prices" class="tab-content flex-1 p-6 space-y-4 overflow-y-auto hidden">
             <div class="chat-message ai p-4 rounded-xl shadow-md chat-bubble">
                 Olá! Posso ajudar a comparar preços de medicamentos. Basta digitar o nome do medicamento que precisa.
@@ -158,9 +135,28 @@
             </div>
         </div>
 
+        <!-- Comunidade -->
+        <div id="community" class="tab-content flex flex-col flex-1 hidden">
+            <div id="posts-container" class="flex-1 p-4 overflow-y-auto space-y-4">
+                <p id="community-loading" class="text-center text-slate-500 mt-8">A carregar posts da comunidade...</p>
+                <!-- Posts serão carregados aqui -->
+            </div>
+            <div id="community-input-area" class="p-4 bg-slate-100 border-t border-slate-300">
+                <div class="flex items-center space-x-2">
+                    <input type="text" id="community-input" placeholder="Partilhe uma dica ou pergunta com a comunidade..."
+                           class="flex-1 pl-4 pr-4 py-3 rounded-full border-2 border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600 transition duration-300">
+                    <button id="post-btn" class="bg-emerald-500 text-white p-2 rounded-full shadow-lg hover:bg-emerald-600 transition duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
 
-        <!-- Área de entrada -->
-        <div class="p-6 bg-slate-100 rounded-b-2xl shadow-inner">
+
+        <!-- Área de entrada (somente para Chatbot/Prices) -->
+        <div id="chat-input-area" class="p-6 bg-slate-100 rounded-b-2xl shadow-inner">
             <div class="flex items-center space-x-2">
                 <input type="file" id="image-upload" accept="image/*" class="hidden">
                 <button id="image-upload-btn" class="image-upload-btn">
@@ -183,32 +179,92 @@
 
 
     <script>
-        // --- CONFIGURAÇÃO DE CHAVE GEMINI ---
-        // Se você estiver no Canvas, a chave será preenchida automaticamente.
-        // Se estiver no GitHub Pages, você DEVE inserir a sua chave API AQUI para o Chatbot funcionar.
-        // NUNCA faça commit da sua chave em um repositório público! Use um placeholder vazio.
-        const CANVAS_API_KEY = typeof __api_key !== 'undefined' ? __api_key : "AIzaSyAH83Z172zxOYggj5bgxzO9-lsN4YgfLuY"; 
-        const GEMINI_API_KEY = CANVAS_API_KEY || ""; // Insira manualmente a sua chave aqui: "SUA_CHAVE_AQUI"
+        // --- CHAVES E CONFIGURAÇÕES CRÍTICAS ---
         
-        // --- AVISO DE CHAVE ---
-        const authStatusElement = document.getElementById('auth-status');
-        if (GEMINI_API_KEY === "") {
-             authStatusElement.textContent = 'AVISO: Chave Gemini API não configurada. O Chatbot não funcionará.';
-             authStatusElement.classList.add('text-red-400');
-        } else {
-             authStatusElement.textContent = 'Chatbot ativado com chave API.';
-             authStatusElement.classList.remove('text-red-400');
-             authStatusElement.classList.add('text-green-500');
+        // 1. CHAVE GEMINI API (para Chatbot e Preços)
+        // Se estiver no Canvas, a chave é automática. Se for no GitHub Pages, você DEVE inserir a sua chave aqui.
+        const CANVAS_API_KEY = typeof __api_key !== 'undefined' ? __api_key : "AIzaSyAH83Z172zxOYggj5bgxzO9-lsN4YgfLuY"; 
+        const GEMINI_API_KEY = CANVAS_API_KEY || ""; // <<-- INSIRA SUA CHAVE AQUI SE NÃO ESTIVER NO CANVAS
+
+        // 2. CONFIGURAÇÃO FIREBASE (para Comunidade)
+        // ESTE É UM PLACEHOLDER! VOCÊ DEVE SUBSTITUIR ESTE OBJETO PELA SUA CONFIGURAÇÃO REAL DO FIREBASE.
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyAH83Z172zxOYggj5bgxzO9-lsN4YgfLuY", // Ex: "AIzaSyC..."
+            authDomain: "guiasaude-b85a7.firebaseapp.com",
+            projectId: "guiasaude-b85a7",
+            storageBucket: "guiasaude-b85a7.firebasestorage.app",
+            messagingSenderId: "593810769765",
+            appId: "1:593810769765:web:52f6ef3b18eefcafc4c38c",
+            measurementId: "G-C586M4M1XR"
+        };
+
+        // --- Variáveis Globais de Serviços ---
+        let db;
+        let auth;
+        let userId = null;
+        let isAuthReady = false;
+
+        // --- Inicialização Firebase e Autenticação Anónima ---
+        function initializeFirebase() {
+            if (FIREBASE_CONFIG.apiKey === "SEU_API_KEY_FIREBASE") {
+                 console.warn("Firebase não inicializado: Configuração Padrão em uso. A Comunidade não funcionará.");
+                 document.getElementById('auth-status').textContent = 'AVISO: Configure o Firebase para a Comunidade funcionar.';
+                 document.getElementById('auth-status').classList.remove('text-green-500');
+                 document.getElementById('auth-status').classList.add('text-red-400');
+                 return;
+            }
+
+            // Inicializar App
+            // Nota: Os imports do Firebase no <head> usam a notação do CDN, 
+            // mas o código JavaScript deve usar a API global se não for um módulo.
+            // Para garantir a compatibilidade com o CDN, a inicialização é feita diretamente:
+            const app = firebase.initializeApp(FIREBASE_CONFIG);
+            db = firebase.firestore().getFirestore(app);
+            auth = firebase.auth().getAuth(app);
+            
+            // Autenticação Anónima
+            firebase.auth().onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    userId = user.uid;
+                    isAuthReady = true;
+                    document.getElementById('auth-status').textContent = `Bem-vindo! ID do Utilizador (anon): ${userId.substring(0, 8)}...`;
+                    document.getElementById('auth-status').classList.remove('text-red-400');
+                    document.getElementById('auth-status').classList.add('text-green-500');
+                    
+                    // Inicia o listener de posts
+                    listenForPosts();
+
+                } else {
+                    // Tenta iniciar a sessão anonimamente
+                    firebase.auth().signInAnonymously(auth)
+                        .catch((error) => {
+                            console.error("Erro no login anónimo:", error);
+                            document.getElementById('auth-status').textContent = 'ERRO: Falha na autenticação. Verifique as Regras de Segurança do Firebase.';
+                            isAuthReady = true; // Para desbloquear a UI, mesmo com erro.
+                        });
+                }
+            });
         }
+        
+        // Chamada de inicialização
+        window.onload = initializeFirebase;
 
-
+        // --- Configuração da UI ---
         const userInput = document.getElementById('user-input');
         const sendBtn = document.getElementById('send-btn');
         const chatContainer = document.getElementById('chatbot');
+        const pricesContainer = document.getElementById('prices');
+        const communityContainer = document.getElementById('community');
+        const postsContainer = document.getElementById('posts-container');
+        const communityInput = document.getElementById('community-input');
+        const postBtn = document.getElementById('post-btn');
         const tabs = document.querySelectorAll('.tab-button');
         const tabContents = document.querySelectorAll('.tab-content');
         const imageUploadBtn = document.getElementById('image-upload-btn');
         const imageUpload = document.getElementById('image-upload');
+        const chatInputArea = document.getElementById('chat-input-area');
+        const communityInputArea = document.getElementById('community-input-area');
+
         let currentTab = 'chatbot';
 
 
@@ -218,21 +274,29 @@
                 tabs.forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
                 tabContents.forEach(content => content.classList.add('hidden'));
-                const targetTab = document.getElementById(tab.dataset.tab);
+
+                const targetTabId = tab.dataset.tab;
+                const targetTab = document.getElementById(targetTabId);
                 targetTab.classList.remove('hidden');
-                currentTab = tab.dataset.tab;
+                currentTab = targetTabId;
 
-
-                if (currentTab === 'prices') {
-                    userInput.placeholder = "Digite o nome do medicamento para comparar preços...";
+                // Alternar a área de entrada
+                if (currentTab === 'community') {
+                    chatInputArea.classList.add('hidden');
+                    communityInputArea.classList.remove('hidden');
                 } else {
-                    userInput.placeholder = "Pergunte sobre saúde...";
+                    chatInputArea.classList.remove('hidden');
+                    communityInputArea.classList.add('hidden');
+                    userInput.placeholder = currentTab === 'prices' ? "Digite o nome do medicamento para comparar preços..." : "Pergunte sobre saúde...";
                 }
             });
         });
+        
+        // Ocultar a área de input da comunidade no início
+        communityInputArea.classList.add('hidden');
 
 
-        // --- Funções Auxiliares (TTS e API) ---
+        // --- Funções Auxiliares (TTS e API Gemini) ---
 
         function base64ToArrayBuffer(base64) {
             const binary_string = window.atob(base64);
@@ -439,7 +503,7 @@
             return text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>'); 
         }
 
-        // --- Funções de Chat ---
+        // --- Funções de Chatbot/Preços ---
 
         function addMessage(text, sender, container) {
             const messageDiv = document.createElement('div');
@@ -467,7 +531,7 @@
                 container = chatContainer;
                 prompt = "Você é um assistente de saúde inteligente e prestativo. Use o Google Search para encontrar informações reais e atualizadas sobre UBS, hospitais, farmácias populares e clínicas acessíveis. Responda de forma clara e concisa, sempre apresentando as informações em formato de lista (bullet points). Para perguntas sobre tempo de espera, mencione que a informação é baseada em relatos de usuários e pode variar. Se a pergunta for muito específica ou exigir um diagnóstico, sempre instrua o usuário a procurar um profissional de saúde. Se uma imagem for fornecida, analise a imagem e forneça informações relevantes com base nela.";
             } else if (currentTab === 'prices') {
-                container = document.getElementById('prices');
+                container = pricesContainer;
                 prompt = "Você é um assistente de comparação de preços de medicamentos. Use o Google Search para encontrar e comparar preços de medicamentos entre farmácias populares. Responda de forma clara e concisa, apresentando os preços e as farmácias em formato de lista (bullet points).";
             }
 
@@ -506,8 +570,8 @@
                 `;
                 const newAiMessage = document.createElement('div');
                 newAiMessage.classList.add('chat-message', 'ai', 'p-4', 'rounded-xl', 'shadow-md', 'chat-bubble');
-                newAiMessage.innerHTML = aiResponseHtml;
                 container.appendChild(newAiMessage);
+                newAiMessage.innerHTML = aiResponseHtml;
 
 
             } catch (error) {
@@ -526,6 +590,83 @@
             }
         }
 
+        // --- Funções da Comunidade (Firestore) ---
+
+        async function postToCommunity() {
+            if (!isAuthReady || !userId) {
+                alert("Aguarde a autenticação ou verifique a configuração do Firebase.");
+                return;
+            }
+            if (FIREBASE_CONFIG.apiKey === "SEU_API_KEY_FIREBASE") {
+                alert("Erro: Configure o Firebase antes de postar.");
+                return;
+            }
+
+
+            const content = communityInput.value.trim();
+            if (content === '') return;
+
+            // O caminho da coleção pública no Firebase.
+            const postRef = firebase.firestore().collection(db, 'community_posts');
+            
+            try {
+                await firebase.firestore().addDoc(postRef, {
+                    userId: userId,
+                    content: content,
+                    timestamp: firebase.firestore().serverTimestamp() 
+                });
+                communityInput.value = '';
+            } catch (error) {
+                console.error("Erro ao enviar post:", error);
+                alert("Erro ao enviar a mensagem. Verifique a sua consola e as Regras de Segurança do Firebase.");
+            }
+        }
+        
+        function renderPost(post) {
+            const postElement = document.createElement('div');
+            postElement.classList.add('post-card', 'p-4');
+            
+            // Tratamento de timestamp para evitar erros se ainda não estiver definido no servidor
+            const timeString = post.timestamp && post.timestamp.toDate ? 
+                new Date(post.timestamp.toDate()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 
+                'Agora';
+
+            postElement.innerHTML = `
+                <div class="flex justify-between items-center mb-1">
+                    <span class="font-bold text-sm text-slate-700">Utilizador: ${post.userId.substring(0, 8)}...</span>
+                    <span class="text-xs text-slate-500">${timeString}</span>
+                </div>
+                <p class="text-slate-800 break-words">${post.content}</p>
+            `;
+            return postElement;
+        }
+
+        function listenForPosts() {
+            if (!db || FIREBASE_CONFIG.apiKey === "SEU_API_KEY_FIREBASE") return;
+            
+            const postsRef = firebase.firestore().collection(db, 'community_posts');
+            const q = firebase.firestore().query(postsRef, firebase.firestore().orderBy('timestamp', 'desc'), firebase.firestore().limit(50));
+            
+            // Certifique-se de remover a mensagem de carregamento inicial
+            const loadingMsg = document.getElementById('community-loading');
+            if(loadingMsg) loadingMsg.remove();
+
+            firebase.firestore().onSnapshot(q, (snapshot) => {
+                postsContainer.innerHTML = ''; 
+                
+                snapshot.forEach((doc) => {
+                    const post = doc.data();
+                    postsContainer.appendChild(renderPost(post));
+                });
+                postsContainer.scrollTop = 0; // Mostrar posts mais recentes no topo
+            }, (error) => {
+                console.error("Erro ao ouvir posts:", error);
+                postsContainer.innerHTML = `<p class="text-red-500">Erro ao carregar posts: Verifique a sua configuração e as Regras de Segurança do Firebase. Console para detalhes.</p>`;
+            });
+        }
+
+
+        // --- Listeners de Eventos ---
 
         sendBtn.addEventListener('click', () => handleSendMessage());
         userInput.addEventListener('keypress', (e) => {
@@ -534,11 +675,9 @@
             }
         });
 
-
         imageUploadBtn.addEventListener('click', () => {
             imageUpload.click();
         });
-
 
         imageUpload.addEventListener('change', (event) => {
             const file = event.target.files[0];
@@ -552,12 +691,21 @@
             };
             reader.readAsDataURL(file);
         });
+        
+        // Listener para a Comunidade
+        postBtn.addEventListener('click', postToCommunity);
+        communityInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                postToCommunity();
+            }
+        });
 
 
         document.addEventListener('click', async (e) => {
             // Lógica para o botão de TTS
             if (e.target.closest('.speak-btn')) {
                 const button = e.target.closest('.speak-btn');
+                // Remove tags HTML para passar apenas texto limpo para o TTS
                 const textToSpeak = button.getAttribute('data-text').replace(/<[^>]*>?/gm, ''); 
                 if (textToSpeak) {
                     speakText(textToSpeak);
@@ -567,6 +715,7 @@
             // Lógica para o botão de Resumo
             if (e.target.closest('.summary-btn')) {
                 const button = e.target.closest('.summary-btn');
+                // Remove tags HTML para passar apenas texto limpo para o resumo
                 const textToSummarize = button.getAttribute('data-text').replace(/<[^>]*>?/gm, '');
                 
                 if (textToSummarize) {
@@ -583,54 +732,13 @@
 
                     const summaryMessage = document.createElement('div');
                     summaryMessage.classList.add('chat-message', 'ai', 'p-4', 'rounded-xl', 'shadow-md', 'chat-bubble');
+                    // Substitui a formatação Markdown por HTML e insere o resumo
                     summaryMessage.innerHTML = `<p class="font-bold mb-1">Resumo Gerado:</p>${summary.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')}`; 
                     chatContainer.appendChild(summaryMessage);
                     chatContainer.scrollTop = chatContainer.scrollHeight;
                 }
             }
         });
-
-
-        // --- Lógica do QR Code ---
-        const qrcodeModal = document.getElementById('qrcode-modal');
-        const openQrcodeModalBtn = document.getElementById('open-qrcode-modal');
-        const closeQrcodeModalBtn = document.getElementById('close-qrcode-modal');
-        const qrcodeContainer = document.getElementById('qrcode-container');
-
-        // Função para gerar o QR Code
-        function generateQRCode(url) {
-            qrcodeContainer.innerHTML = ''; // Limpa o conteúdo anterior
-            // A biblioteca QRCode.js desenha o código dentro do container
-            new QRCode(qrcodeContainer, {
-                text: url,
-                width: 200,
-                height: 200,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
-            });
-        }
-        
-        // Abrir Modal
-        openQrcodeModalBtn.addEventListener('click', () => {
-            const currentUrl = window.location.href;
-            qrcodeModal.classList.remove('hidden');
-            // Gera o QR Code com a URL atual do site
-            generateQRCode(currentUrl);
-        });
-
-        // Fechar Modal
-        closeQrcodeModalBtn.addEventListener('click', () => {
-            qrcodeModal.classList.add('hidden');
-        });
-
-        // Fechar ao clicar fora do modal
-        qrcodeModal.addEventListener('click', (e) => {
-            if (e.target === qrcodeModal) {
-                qrcodeModal.classList.add('hidden');
-            }
-        });
-
     </script>
 </body>
 </html>
